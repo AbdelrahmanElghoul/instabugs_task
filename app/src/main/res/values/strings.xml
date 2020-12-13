@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">instabugs_task</string>
+    <string name="sharedPrefernce_Name">backup</string>
+    <string name="sharedPrefernce_Key">words</string>
 </resources>
