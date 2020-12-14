@@ -29,9 +29,9 @@ public class Database  extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL( "Create Table "
-                +Table_Name+" ("
-                +Col_1+ "String  Primary Key unique, "
-                +Col_2+" int)" );
+                +Table_Name+" ( "
+                +Col_1+ " String Primary Key unique ,"
+                +Col_2+" int )" );
     }
 
     @Override
@@ -65,6 +65,7 @@ public class Database  extends SQLiteOpenHelper {
     public void AddAll(HashMap<String,Integer> map){
         try{
             //todo add thread
+            Log.d(TAG,"Add All");
             SQLiteDatabase db = this.getWritableDatabase();
             db.execSQL("DROP TABLE IF EXISTS "+Table_Name);
             onCreate( db );
@@ -72,11 +73,8 @@ public class Database  extends SQLiteOpenHelper {
             Iterator it = map.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry pair = (Map.Entry)it.next();
-//                System.out.println(pair.getKey() + " = " + pair.getValue());
                 Add(pair.getKey().toString(),Integer.parseInt(pair.getValue().toString()));
-                it.remove(); // avoids a ConcurrentModificationException
             }
-
             DatabaseBackup.deleteBackup(context);
         }
         catch (Exception e){
@@ -89,6 +87,7 @@ public class Database  extends SQLiteOpenHelper {
     public HashMap<String,Integer> getAll(){
         HashMap<String,Integer> map=new HashMap<>();
         try {
+            Log.d(TAG,"get All");
             SQLiteDatabase db=getReadableDatabase();
             Cursor cursor=db.rawQuery( "select * from "+Table_Name ,null);
             cursor.moveToFirst();
@@ -102,6 +101,7 @@ public class Database  extends SQLiteOpenHelper {
         }
         catch (Exception  e){
             Toast.makeText( context,e.getMessage(),Toast.LENGTH_LONG ).show();
+            Log.e(TAG,e.getMessage());
         }
 
         return map;

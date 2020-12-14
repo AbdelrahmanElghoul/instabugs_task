@@ -40,11 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         bindViews();
         init();
-
         scrapping.execute();
-
-
-
     }
 
     void bindViews(){
@@ -56,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         scrapping=new WebScrapping();
 
+        wordsMap= new HashMap<>();
         rv_words.setHasFixedSize(true);
         rv_words.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
 
@@ -67,7 +64,9 @@ public class MainActivity extends AppCompatActivity {
         scrapping.cancel(true);
     }
 
-    private class WebScrapping extends AsyncTask<Void, Void, HashMap<String, Integer>> {
+    private class WebScrapping extends AsyncTask<Void, Void, Void> {
+
+
         Database db=new Database( getApplicationContext(),1 );
         @Override
         protected void onPreExecute() {
@@ -76,20 +75,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        protected HashMap<String, Integer> doInBackground(Void... params) {
+        protected Void doInBackground(Void... params) {
+            Log.d(TAG, "start");
             try {
                 //Has internet access
-               if(new Internet().hasInternetAccess(getApplicationContext())){
+                boolean isConnected=new Internet().isNetworkAvailable(getApplicationContext());
+                Log.d(TAG+" network state", String.valueOf(isConnected));
+               if(isConnected){
                    Document document = Jsoup.connect("https://instabug.com").get();
                    String words = document.text().toLowerCase().replaceAll("[^a-z0-9\\s]", "");
-//                String text=document.toString().toLowerCase().replaceAll("[^a-z0-9\\s]", "");
 
                    Log.d(TAG + " jsoup doc", document.toString());
                    Log.d(TAG + " jsoup words", words);
-//                Log.d(TAG+" jsoup regex",text);
-//                Pattern wordPattern = Pattern.compile("\\s[_A-Za-z0-9-]\\s");
-//                Matcher matcher=wordPattern.matcher(document.toString());
-//                Log.d(TAG+"matcher count", String.valueOf(matcher.groupCount()));
+
                    DatabaseBackup.saveBackup(getApplicationContext(),words);
                    word2map(words);
                }
@@ -101,27 +99,35 @@ public class MainActivity extends AppCompatActivity {
                        if (backup != null) {
                            word2map(backup);
                        }
-                       // no internet + no data in db + no data in backup
                        else{
-                           Toast.makeText(getApplicationContext(),
-                                   "offline mode and no data to display", Toast.LENGTH_SHORT).show();
+                         throw new Exception("offline mode and no data to display");
                        }
                    }
                }
 
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 e.printStackTrace();
                 Log.e(TAG+"exception",e.getMessage());
+                String backup = DatabaseBackup.getBackup(getApplicationContext());
+                if (backup != null) {
+                    word2map(backup);
+                }
             }
-
-            return wordsMap;
+            return null;
         }
 
+
         @Override
-        protected void onPostExecute(HashMap<String, Integer> aVoid) {
+        protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
             progressBar.setVisibility(View.GONE);
+            Log.d(TAG,String.valueOf(wordsMap.size()));
+            Log.d(TAG,"onPostExecute");
+            if(wordsMap.size()==0){
+                Toast.makeText(MainActivity.this, "something went wrong please try again later", Toast.LENGTH_SHORT).show();
+                return;
+            }
             db.AddAll(wordsMap);
             List<String> wordList = new ArrayList<String>(wordsMap.keySet());
             List<Integer> wordCountList = new ArrayList<Integer>(wordsMap.values());
@@ -131,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         void word2map(String words){
+            Log.d(TAG,"Word2Map");
             String[] wordList= words.split(" ");
             for (String word : wordList){
                 if(word.trim().length()==0) continue;
@@ -144,3 +151,4 @@ public class MainActivity extends AppCompatActivity {
 
     }
 }
+
