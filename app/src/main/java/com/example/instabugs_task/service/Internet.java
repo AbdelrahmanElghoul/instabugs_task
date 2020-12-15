@@ -1,16 +1,16 @@
-package com.example.instabugs_task.util;
+package com.example.instabugs_task.service;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.example.instabugs_task.util.StartAsyncTask;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
 import java.net.URL;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutionException;
+
 import javax.net.ssl.HttpsURLConnection;
 
 
@@ -32,12 +32,12 @@ public class Internet {
             } catch (Exception e) {
                 e.printStackTrace();
                 Log.e("network state",e.getMessage());
-                startAsyncTask.start(false);
+                startAsyncTask.getData(false);
             }
         }
         else{
             Log.d( "Interent", "No network available!" );
-            startAsyncTask.start(false);
+            startAsyncTask.getData(false);
         }
 
 
@@ -60,11 +60,11 @@ public class Internet {
                 urlc.setRequestProperty("Connection", "close");
                 urlc.setConnectTimeout(1500);
                 urlc.connect();
-                startAsyncTask.start(true);
+                startAsyncTask.getData(true);
                 return null;
             } catch (IOException e) {
                 Log.e( "Internet exception", e.getMessage() );
-                startAsyncTask.start(false);
+                startAsyncTask.getData(false);
                 return null;
             } }
 
