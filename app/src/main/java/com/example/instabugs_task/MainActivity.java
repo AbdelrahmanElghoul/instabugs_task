@@ -16,6 +16,7 @@ import android.widget.Toast;
 import com.example.instabugs_task.database.Database;
 import com.example.instabugs_task.database.DatabaseBackup;
 import com.example.instabugs_task.util.Internet;
+import com.example.instabugs_task.util.StartAsyncTask;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -26,7 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements StartAsyncTask {
 
     WebScrapping scrapping;
     String TAG=MainActivity.class.getSimpleName();
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         bindViews();
         init();
-        scrapping.execute();
+//        scrapping.execute();
     }
 
     void bindViews(){
@@ -51,6 +52,7 @@ public class MainActivity extends AppCompatActivity {
     void init(){
         progressBar.setVisibility(View.VISIBLE);
         scrapping=new WebScrapping();
+        new Internet(this).hasInternetAccess();
 
         wordsMap= new HashMap<>();
         rv_words.setHasFixedSize(true);
@@ -61,49 +63,50 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        scrapping.cancel(true);
+        if(scrapping!=null)scrapping.cancel(true);
     }
 
-    private class WebScrapping extends AsyncTask<Void, Void, Void> {
+    @Override
+    public void start(boolean connected) {
+        Log.d("startAsyncTask",String.valueOf(connected));
+        if(scrapping!=null && !scrapping.isCancelled())scrapping.execute(connected);
+    }
+
+    private class WebScrapping extends AsyncTask<Boolean, Void, Void> {
 
 
         Database db=new Database( getApplicationContext(),1 );
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-//            progressBar.setVisibility(View.VISIBLE);
-        }
 
         @Override
-        protected Void doInBackground(Void... params) {
-            Log.d(TAG, "start");
+        protected Void doInBackground(Boolean... booleans) {
+            Log.d(TAG, "start"+booleans.length);
             try {
                 //Has internet access
-                boolean isConnected=new Internet().isNetworkAvailable(getApplicationContext());
-                Log.d(TAG+" network state", String.valueOf(isConnected));
-               if(isConnected){
-                   Document document = Jsoup.connect("https://instabug.com").get();
-                   String words = document.text().toLowerCase().replaceAll("[^a-z0-9\\s]", "");
+//                boolean isConnected=new Internet().isNetworkAvailable(getApplicationContext());
+//                Log.d(TAG+" network state", String.valueOf(isConnected));
+                if(booleans[0]){
+                    Document document = Jsoup.connect("https://instabug.com").get();
+                    String words = document.text().toLowerCase().replaceAll("[^a-z0-9\\s]", "");
 
-                   Log.d(TAG + " jsoup doc", document.toString());
-                   Log.d(TAG + " jsoup words", words);
+//                   Log.d(TAG + " jsoup doc", document.toString());
+//                   Log.d(TAG + " jsoup words", words);
 
-                   DatabaseBackup.saveBackup(getApplicationContext(),words);
-                   word2map(words);
-               }
-               else {
-                   wordsMap = db.getAll();
-                   // no internet + no data in db
-                   if (wordsMap.size() == 0) {
-                       String backup = DatabaseBackup.getBackup(getApplicationContext());
-                       if (backup != null) {
-                           word2map(backup);
-                       }
-                       else{
-                         throw new Exception("offline mode and no data to display");
-                       }
-                   }
-               }
+                    DatabaseBackup.saveBackup(getApplicationContext(),words);
+                    word2map(words);
+                }
+                else {
+                    wordsMap = db.getAll();
+                    // no internet + no data in db
+                    if (wordsMap.size() == 0) {
+                        String backup = DatabaseBackup.getBackup(getApplicationContext());
+                        if (backup != null) {
+                            word2map(backup);
+                        }
+                        else{
+                            throw new Exception("offline mode and no data to display");
+                        }
+                    }
+                }
 
             }
             catch (Exception e) {
@@ -116,6 +119,13 @@ public class MainActivity extends AppCompatActivity {
             }
             return null;
         }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+//            progressBar.setVisibility(View.VISIBLE);
+        }
+
 
 
         @Override
